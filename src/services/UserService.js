@@ -4,7 +4,7 @@ const { genneralAccessToken, genneralRefreshToken } = require("./JwtService")
 
 const createUser = (newUser) => {
     return new Promise(async (resolve, reject) => {
-        const { name, email, password, confirmPassword, phone, avatar } = newUser
+        const { name, email, password, confirmPassword, phone, avatar, isAdmin } = newUser
         try {
 
             const checkUser = await User.findOne({
@@ -18,9 +18,8 @@ const createUser = (newUser) => {
             }
 
             const hash = bcrypt.hashSync(password, 10)
-
             const createUser = await User.create({
-                name, email, password: hash, phone, avatar
+                name, email, password: hash, phone, avatar, isAdmin
 
             })
 
@@ -83,33 +82,38 @@ const loginUser = (userLogin) => {
 }
 const updateUser = (id, data) => {
     return new Promise(async (resolve, reject) => {
-
         try {
+            const checkUser = await User.findOne({ _id: id });
 
-            const checkUser = await User.findOne({
-                _id: id
-            })
+            if (!checkUser) {
+                return reject({ status: 'ERROR', message: 'User not found' });
+            }
 
-            const updatedUser = await User.findByIdAndUpdate(id, data, { new: true })
-            console.log('update uer', updateUser);
+            // Tạo một object mới chứa dữ liệu cập nhật
+            const newData = { ...data };
 
+            // Kiểm tra nếu có giá trị detailAddress, xa, huyen, tinh thì cập nhật trường address
+            if (data.detailAddress || data.xa || data.huyen || data.tinh) {
+                // Tạo giá trị mới cho trường address từ các giá trị khác
+                newData.address = [data.detailAddress, data.xa, data.huyen, data.tinh].filter(Boolean).join(', ');
+            }
+
+            // Cập nhật người dùng với dữ liệu mới
+            const updatedUser = await User.findByIdAndUpdate(id, newData, { new: true });
+            console.log('Updated user', updatedUser);
 
             resolve({
                 status: 'OK',
                 message: 'SUCCESS',
                 data: updatedUser,
-                data
-
-            })
-
-
+            });
         } catch (e) {
             console.log(e.message);
-            reject(e)
+            reject(e);
         }
+    });
+};
 
-    })
-}
 const deleteUser = (id) => {
     return new Promise(async (resolve, reject) => {
 
@@ -119,7 +123,6 @@ const deleteUser = (id) => {
             })
 
             await User.findByIdAndDelete(id)
-            console.log('delete uer', deleteUser);
             resolve({
                 status: 'OK',
                 message: 'delete user SUCCESS',

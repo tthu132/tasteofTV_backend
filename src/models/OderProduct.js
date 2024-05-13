@@ -18,10 +18,16 @@ const orderSchema = new mongoose.Schema({
     shippingAddress: {
         fullName: { type: String, required: true },
         address: { type: String, required: true },
-        city: { type: String, required: true },
-        phone: { type: Number, required: true },
+
+        phone: { type: String, required: true },
     },
-    paymentMethod: { type: String, required: true },
+    // paymentMethod: { type: String, required: true },
+    paymentMethod: {
+        type: String,
+        required: true,
+        enum: ["VNPay", "COD", "later_money"], // Thêm phương thức thanh toán VNPay và COD
+        default: "Unpaid",
+    },
     itemsPrice: { type: Number, required: true },
     shippingPrice: { type: Number, required: true },
     totalPrice: { type: Number, required: true },
@@ -30,6 +36,12 @@ const orderSchema = new mongoose.Schema({
     paidAt: { type: Date },
     isDelivered: { type: Boolean, default: false },
     deliveredAt: { type: Date },
+    status: {
+        type: String,
+        enum: ['Đặt hàng thành công', 'Đang xử lý', 'Đã gửi hàng', 'Đã giao hàng', 'Đã hủy'],
+        default: 'Đặt hàng thành công'
+    },
+    note: { type: String, },
 },
     {
         timestamps: true,

@@ -1,60 +1,48 @@
-const Product = require("../models/ProductModel");
-const Image = require('../models/product-image');
-const ProductCategory = require("../models/ProductCategoryModel")
+const Product = require("../models/product-image")
 
-const createProduct = (newProduct) => {
-    return new Promise(async (resolve, reject) => {
-        const { name, countInStock, price, rating, description, idProductCategory, idsImage, discount, donvi, exp, selled } = newProduct;
+const createProduct = async (newProductData) => {
+    try {
+        const { images } = newProductData;
+        console.log('server', newProductData);
+        console.log('server', images);
 
-        try {
-            const checkProduct = await Product.findOne({ name: name });
-            if (checkProduct !== null) {
-                resolve({
-                    status: 'ERR',
-                    message: 'The name of product is already'
+
+        const createdProducts = await Promise.all(newProductData.map(async (imageData) => {
+            try {
+                const newProduct = await Product.create({
+                    image: imageData
                 });
-            }
 
-            // Chuyển đổi idsImage thành mảng nếu nó không phải là mảng
-            const uploadedImageIds = Array.isArray(idsImage) ? idsImage : [idsImage];
-
-
-            // Lặp qua mỗi ID ảnh và lưu vào cơ sở dữ liệu
-            const foundImages = await Image.find({ _id: { $in: uploadedImageIds } });
-            const validImageIds = foundImages.map(image => image._id);
-
-            const newProduct = await Product.create({
-                name,
-                discount,
-                donvi,
-                countInStock: Number(countInStock),
-                price,
-                rating,
-                description,
-                idProductCategory,
-                idsImage: validImageIds, // Lưu mảng các ID ảnh
-                exp, selled
-            });
-
-            if (newProduct) {
-                resolve({
+                return {
                     status: 'OK',
                     message: 'SUCCESS',
                     data: newProduct
-                });
+                };
+            } catch (error) {
+                return {
+                    status: 'ERR',
+                    message: `Failed to create product with image data: ${imageData}`,
+                    error: error.message
+                };
             }
-        } catch (e) {
-            reject(e.message);
-        }
-    });
-};
+        }));
+
+        return createdProducts;
+    } catch (error) {
+        throw new Error(`Failed to create products: ${error.message}`);
+    }
+}
 
 const updateProduct = (id, data) => {
     return new Promise(async (resolve, reject) => {
         try {
+            console.log('id ne n1 ', id);
+
+
             const checkProduct = await Product.findOne({
                 _id: id
             })
+            console.log('check product    ', checkProduct);
             if (checkProduct === null) {
                 resolve({
                     status: 'ERR',
@@ -67,12 +55,14 @@ const updateProduct = (id, data) => {
 
             resolve({
                 status: 'OK',
-                message: 'SUCCESSs',
+                message: 'Success',
                 data: updatedProduct,
-                payload: data, // Dữ liệu mới đã cập nhật
-                preview: updatedProduct // Dữ liệu mới đã cập nhật
+                // payload: data, // Dữ liệu mới đã cập nhật
+                // preview: updatedProduct // Dữ liệu mới đã cập nhật
             })
         } catch (e) {
+            console.log('id neee 3 ', id);
+
 
             reject(e.message);
 
@@ -84,6 +74,7 @@ const updateProduct = (id, data) => {
 const deleteProduct = (id) => {
     return new Promise(async (resolve, reject) => {
         try {
+            console.log(id);
             const checkProduct = await Product.findOne({
                 _id: id
             })
@@ -131,8 +122,7 @@ const getDetailsProduct = (id) => {
                     message: 'The product is not defined'
                 })
             }
-            const image = await getImageById(product.idsImage[0])// Tìm ảnh trong cơ sở dữ liệu
-            product.firstImage = image;
+
             resolve({
                 status: 'OK',
                 message: 'SUCESS',
@@ -143,23 +133,6 @@ const getDetailsProduct = (id) => {
         }
     })
 }
-const getImageById = async (imageId) => {
-    try {
-        // Truy vấn dữ liệu từ model ảnh dựa trên ID ảnh
-        const image = await Image.findById(imageId);
-        // console.log(image);
-
-        if (image) {
-            return image.image; // Trả về URL của ảnh
-        } else {
-            return null; // Trả về null nếu không tìm thấy ảnh
-        }
-    } catch (error) {
-        console.error('Error retrieving image by id:', error);
-        throw error;
-    }
-};
-
 
 const getAllProduct = (limit, page, sort, filter) => {
     return new Promise(async (resolve, reject) => {
@@ -196,19 +169,6 @@ const getAllProduct = (limit, page, sort, filter) => {
             } else {
                 allProduct = await Product.find().limit(limit).skip(page * limit).sort({ createdAt: -1, updatedAt: -1 })
             }
-            for (let i = 0; i < allProduct.length; i++) {
-                const firstImageId = allProduct[i].idsImage[0]; // Lấy id ảnh đầu tiên
-                const image = await getImageById(allProduct[i].idsImage[0])// Tìm ảnh trong cơ sở dữ liệu
-                allProduct[i].firstImage = image; // Lấy trường image từ ảnh tìm được
-            }
-            for (let i = 0; i < allProduct.length; i++) {
-                const product = allProduct[i];
-                const productCategory = await ProductCategory.findById(product.idProductCategory);
-                if (productCategory) {
-                    product.categoryName = productCategory.name;
-                }
-            }
-
             resolve({
                 status: 'OK',
                 message: 'Success',
@@ -237,53 +197,7 @@ const getAllType = () => {
         }
     })
 }
-const getType = (id) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const products = await Product.find({ idProductCategory: id });
-            resolve({
-                status: 'OK',
-                message: 'get type product success',
-                data: products
-            })
-        } catch (e) {
-            reject(e)
-        }
-    })
-}
 
-const getAllProduct2 = () => {
-    return new Promise(async (resolve, reject) => {
-
-        try {
-
-            const data = await Product.find()
-
-            // for (let i = 0; i < data.length; i++) {
-            //     const firstImageId = data[i].idsImage[0]; // Lấy id ảnh đầu tiên
-            //     const image = await getImageById(data[i].idsImage[0])// Tìm ảnh trong cơ sở dữ liệu
-            //     data[i].firstImage = image; // Lấy trường image từ ảnh tìm được
-            // }
-            for (let i = 0; i < data.length; i++) {
-                const product = data[i];
-                const productCategory = await ProductCategory.findById(product.idProductCategory);
-                if (productCategory) {
-                    product.categoryName = productCategory.name;
-                }
-            }
-
-            resolve({
-                status: 'OK',
-                message: 'delete user SUCCESS',
-                data
-            })
-
-        } catch (e) {
-            console.log(e.message);
-            reject(e)
-        }
-    })
-}
 module.exports = {
     createProduct,
     updateProduct,
@@ -291,7 +205,5 @@ module.exports = {
     deleteProduct,
     getAllProduct,
     deleteManyProduct,
-    getAllType,
-    getType,
-    getAllProduct2
+    getAllType
 }

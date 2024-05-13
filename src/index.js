@@ -19,7 +19,7 @@ app.use(express.urlencoded({ limit: '50mb' }));
 app.use(bodyParser.json())
 app.use(cookieParser())
 
-
+// app.use(cors({ origin: true, credentials: true }));
 routes(app)
 
 
@@ -32,6 +32,18 @@ mongoose.connect(`${process.env.MONGO_DB}`)
     })
 
 
+// import "./khoa_models/index.js"
+
+// app.post('/api/translate', async (req, res) => {
+//     try {
+//         const { text, language } = req.body;
+//         const translatedText = await translateText(text, language);
+//         res.status(200).json({ text: translatedText });
+//     } catch (error) {
+//         console.error('Error:', error);
+//         res.status(500).json({ error: 'Failed to translate text' });
+//     }
+// });
 app.listen(port, () => {
     console.log('sever is running in port: ', +port);
 })
